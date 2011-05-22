@@ -40,7 +40,10 @@ if (!class_exists('XMLReader', false)) echo "FAILED"; else echo "passed";
 echo "<br>";
 
 echo "Prowl: ";
-$curl_info = curl_version();	// Checks for cURL function and SSL version. Thanks Adrian Rollett!
+if(function_exists('curl_version'))
+    $curl_info = curl_version();	// Checks for cURL function and SSL version. Thanks Adrian Rollett!
+else
+    $curl_info['ssl_version'] = '';
 if(!function_exists('curl_exec') || empty($curl_info['ssl_version']))
     echo "FAILED (cURL library missing or does not support SSL)";
 else
@@ -51,7 +54,7 @@ else
 echo "<br>";
 
 echo "Boxcar: ";
-$curl_info = curl_version();	// Checks for cURL function and SSL version. Thanks Adrian Rollett!
+// $curl_info = curl_version(); // Checks for cURL function and SSL version. Thanks Adrian Rollett!
 if(!function_exists('curl_exec') || empty($curl_info['ssl_version']))
     echo "FAILED (cURL library missing or does not support SSL)";
 else
@@ -62,15 +65,25 @@ else
 echo "<br>";
 
 echo "Database access: ";
-$link = mysql_connect($server, $loginsql, $passsql);
-if ($link === false) echo "FAILED";
-else {
-    if (mysql_select_db($base) === false) echo "FAILED";
+try {
+    if($dbtype == 'sqlite')
+        $db = new PDO($dbtype.':'.$base); //sqlite:dbpath
     else
-        echo "passed";
-        
-    mysql_close($link);
+        $db = new PDO($dbtype.":host=".$server.';dbname='.$base, $loginsql, $passsql); //mysql:host=localhost;dbname=testdb
 }
+catch(PDOException $e) {
+    echo 'failed: '.$e->getMessage();
+}
+
+// $link = mysql_connect($server, $loginsql, $passsql);
+// if ($link === false) echo "FAILED";
+// else {
+//     if (mysql_select_db($base) === false) echo "FAILED";
+//     else
+//         echo "passed";
+//         
+//     mysql_close($link);
+// }
 echo "<br>";
 	
 

@@ -66,6 +66,7 @@ define("SEARCH_TYPE_CRASHLOG", 2);                      // Search for in the cra
 
 $statusversions = array(0 => 'Unknown', 1 => 'In development', 2 => 'Submitted', 3 => 'Available', 4 => 'Discontinued');
 
+$dbtype = 'mysql';                              // database server type (pgsql, mysql, sqlite)
 $server = 'your.server.com';                    // database server hostname
 $loginsql = 'database_username';                // username to access the database
 $passsql = 'database_password';                 // password for the above username

@@ -157,9 +157,20 @@ function doPost($url, $postdata) {
 $allowed_args = ',xmlstring,';
 
 /* Verbindung aufbauen, auswählen einer Datenbank */
-$link = mysql_connect($server, $loginsql, $passsql)
-    or die(xml_for_result(FAILURE_DATABASE_NOT_AVAILABLE));
-mysql_select_db($base) or die(xml_for_result(FAILURE_DATABASE_NOT_AVAILABLE));
+// $link = mysql_connect($server, $loginsql, $passsql)
+//     or die(xml_for_result(FAILURE_DATABASE_NOT_AVAILABLE));
+// mysql_select_db($base) or die(xml_for_result(FAILURE_DATABASE_NOT_AVAILABLE));
+try {
+	if($dbtype == 'sqlite')
+		$db = new PDO($dbtype.':'.$base); //sqlite:dbpath
+	else
+		$db = new PDO($dbtype.":host=".$server.';dbname='.$base, $loginsql, $passsql); //mysql:host=localhost;dbname=testdb
+}
+catch(PDOException $e) {
+	die(xml_for_result(FAILURE_DATABASE_NOT_AVAILABLE));
+}
+$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); // prefer exceptions
+$db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC); // prefer associative arrays
 
 foreach(array_keys($_POST) as $k) {
     $temp = ",$k,";
@@ -333,63 +344,80 @@ foreach ($crashes as $crash) {
 	    $acceptlog = true;
 	    $symbolicate = true;
 	
-	    // get the app name
-	    $query = "SELECT name, hockeyappidentifier FROM ".$dbapptable." where bundleidentifier = '".$crash["bundleidentifier"]."'";
-	    $result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_SEARCH_APP_NAME));
-
-	    $numrows = mysql_num_rows($result);
-	    if ($numrows == 1) {
-		    $crash["appname"] = $row[0];
-		    $hockeyappidentifier = $row[1];
-		    $notify_emails = $mail_addresses;
-		    $notify_pushids = $push_prowlids;
-	    }
-	    mysql_free_result($result);
+		// get the app name
+		$query = "SELECT name, hockeyappidentifier FROM ".$dbapptable." where bundleidentifier = ?";
+		try {
+			$stmt = $db->prepare($query);
+			$stmt->bindParam(1, $crash['bundleidentifier']);
+			$stmt->execute();
+			
+			if ($stmt->rowCount() == 1) {
+				$row = $stmt->fetch();
+				$crash["appname"] = $row['name'];
+				$hockeyappidentifier = $row['hockeyappidentifier'];
+				$notify_emails = $mail_addresses;
+				$notify_pushids = $push_prowlids;
+			}
+		}
+		catch(PDOException $e) {
+			// be nice to log the actual error?
+			die(xml_for_result(FAILURE_SQL_SEARCH_APP_NAME));
+        }
     } else {
 	    // the bundleidentifier is the important string we use to find a match
-	    $query = "SELECT id, symbolicate, name, notifyemail, notifypush, hockeyappidentifier FROM ".$dbapptable." where bundleidentifier = '".$crash["bundleidentifier"]."'";
-	    $result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_SEARCH_APP_NAME));
+        // $query = "SELECT id, symbolicate, name, notifyemail, notifypush, hockeyappidentifier FROM ".$dbapptable." where bundleidentifier = '".$crash["bundleidentifier"]."'";
+		$query = "SELECT id, symbolicate, name, notifyemail, notifypush, hockeyappidentifier FROM ".$dbapptable." where bundleidentifier = ?";
+		try {
+			$stmt = $db->prepare($query);
+			$stmt->bindValue(1, $crash["bundleidentifier"]);
+			$stmt->execute();
+			
+			if ($stmt->rowCount() == 1) {
+			    // we found one, so let this crash through
+			    $acceptlog = true;
 
-	    $numrows = mysql_num_rows($result);
-	    if ($numrows == 1) {
-		    // we found one, so let this crash through
-		    $acceptlog = true;
-		
-		    $row = mysql_fetch_row($result);
-		
-		    // check if a todo entry shall be added to create remote symbolification
-		    if ($row[1] == 1)
-			    $symbolicate = true;
-			
-		    // get the app name
-		    $crash["appname"] = $row[2];
-			
-		    $notify_emails = $row[3];
-		    $notify_pushids = $row[4];
-		    
-		    $hockeyappidentifier = $row[5];
-	    }
-	
-        // add global email addresses
-	    if ($mail_addresses != '') {
-            if ($notify_emails != '') {
-                $notify_emails .= ';'.$mail_addresses;
-            } else {
-                $notify_emails = $mail_addresses;
-            }
-        }
-    
-        // add global prowl ids
-	    if ($push_prowlids != '') {
-            if ($notify_pushids != '') {
-                $notify_pushids .= ','.$push_prowlids;
-            } else {
-                $notify_pushids = $push_prowlids;
-            }
-        }
-        
-	    mysql_free_result($result);
-    }
+			    $row = $stmt->fetch();
+
+			    // check if a todo entry shall be added to create remote symbolification
+			    if ($row['symbolicate'] == 1)
+				    $symbolicate = true;
+
+			    // get the app name
+			    $crash["appname"] = $row['name'];
+
+			    $notify_emails = $row['notifyemail'];
+			    $notify_pushids = $row['notifypush'];
+
+			    $hockeyappidentifier = $row['hockeyappidentifier'];
+		    }
+
+	        // add global email addresses
+		    if ($mail_addresses != '') {
+	            if ($notify_emails != '') {
+	                $notify_emails .= ';'.$mail_addresses;
+	            } else {
+	                $notify_emails = $mail_addresses;
+	            }
+	        }
+
+	        // add global prowl ids
+		    if ($push_prowlids != '') {
+	            if ($notify_pushids != '') {
+	                $notify_pushids .= ','.$push_prowlids;
+	            } else {
+	                $notify_pushids = $push_prowlids;
+	            }
+	        }
+
+		    // mysql_free_result($result);
+			$stmt->closeCursor();
+		}
+		catch(PDOException $e) {
+			die(xml_for_result(FAILURE_SQL_SEARCH_APP_NAME));
+		}
+	    // $result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_SEARCH_APP_NAME));
+	}
+
 
     // Make sure we only have a max of 5 prowl ids
 	$push_array=preg_split('/[,]+/',$notify_pushids);
@@ -416,7 +444,7 @@ foreach ($crashes as $crash) {
             echo xml_for_result(VERSION_STATUS_UNKNOWN);
 
 			/* schliessen der Verbinung */
-			mysql_close($link);
+			// mysql_close($link);
 
     	    // HockeyApp doesn't support direct feedback, it requires the new client to do that. So exit right away.
     	    exit;
@@ -432,19 +460,40 @@ foreach ($crashes as $crash) {
         // first check if the version status is not discontinued
     
        	// check if the version is already added and the status of the version and notify status
-    	$query = "SELECT id, status, notify FROM ".$dbversiontable." WHERE bundleidentifier = '".$crash["bundleidentifier"]."' and version = '".$crash["version"]."'";
-    	$result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_CHECK_VERSION_EXISTS));
+    	
+		try {
+			$query = "SELECT id, status, notify FROM ".$dbversiontable." WHERE bundleidentifier = ? and version = ?";
+			$stmt = $db->prepare($query);
+			$stmt->bindValue(1, $crash["bundleidentifier"]);
+			$stmt->bindValue(1, $crash['version']);
+			$stmt->execute();
+		}
+		catch (PDOException $e) {
+			die(xml_for_result(FAILURE_SQL_CHECK_VERSION_EXISTS));
+		}
+    	// $result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_CHECK_VERSION_EXISTS));
 
-    	$numrows = mysql_num_rows($result);
+    	$numrows = $stmt->rowCount();
     	if ($numrows == 0) {
             // version is not available, so add it with status VERSION_STATUS_AVAILABLE
-    		$query = "INSERT INTO ".$dbversiontable." (bundleidentifier, version, status, notify) values ('".$crash["bundleidentifier"]."', '".$crash["version"]."', ".VERSION_STATUS_UNKNOWN.", ".$notify_default_version.")";
-    		$result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_ADD_VERSION));
+    		// $query = "INSERT INTO ".$dbversiontable." (bundleidentifier, version, status, notify) values ('".$crash["bundleidentifier"]."', '".$crash["version"]."', ".VERSION_STATUS_UNKNOWN.", ".$notify_default_version.")";
+			try {
+				$stmt->closeCursor();
+				$query = "INSERT INTO ".$dbversiontable." (bundleidentifier, version, status, notify) values (:identifier, :version, :status, :notify)";
+				$stmt = $db->prepare($query);
+				$stmt->bindValue(':identifier', $crash['bundleidentifier']);
+				$stmt->bindValue(':version', $crash['version']);
+				$stmt->bindValue(':status', VERSION_STATUS_UNKNOWN);
+				$stmt->bindValue(':notify', $notify_default_version);
+				$stmt->execute();
+			} catch (PDOException $e) {
+				die(xml_for_result(FAILURE_SQL_ADD_VERSION));
+			}
     	} else {
-            $row = mysql_fetch_row($result);
-    		$crash["version_status"] = $row[1];
-    		$notify = $row[2];
-    		mysql_free_result($result);
+            $row = $stmt->fetch();
+    		$crash["version_status"] = $row['status'];
+    		$notify = $row['notify'];
+    		$stmt->closeCursor();
     	}
 
     	if ($crash["version_status"] == VERSION_STATUS_DISCONTINUED)
@@ -484,42 +533,73 @@ foreach ($crashes as $crash) {
 	
     	// if the offset string is not empty, we try a grouping
     	if (strlen($crash_offset) > 0) {
-    		// get all the known bug patterns for the current app version
-    		$query = "SELECT id, fix, amount, description FROM ".$dbgrouptable." WHERE bundleidentifier = '".$crash["bundleidentifier"]."' and affected = '".$crash["version"]."' and pattern = '".mysql_real_escape_string($crash_offset)."'";
-    		$result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_FIND_KNOWN_PATTERNS));
+			// get all the known bug patterns for the current app version
+			try {
+				$query = "SELECT id, fix, amount, description FROM ".$dbgrouptable." WHERE bundleidentifier = :ident AND affected = :affected AND pattern = :pattern";
+				$stmt = $db->prepare($query);
+				$stmt->bindValue(':ident', $crash["bundleidentifier"]);
+				$stmt->bindValue(':affected', $crash["version"]);
+				$stmt->bindValue(':pattern', $crash_offset);
+				$stmt->execute();
+			}
+			catch (PDOException $e) {
+				die(xml_for_result(FAILURE_SQL_FIND_KNOWN_PATTERNS));
+			}
 
-    		$numrows = mysql_num_rows($result);
+    		$numrows = $stmt->rowCount();
 		
     		if ($numrows == 1) {
     			// assign this bug to the group
-    			$row = mysql_fetch_row($result);
-    			$log_groupid = $row[0];
-    			$amount = $row[2];
-                $desc = $row[3];
+    			$row = $stmt->fetch();
+    			$log_groupid = $row['id'];
+    			$amount = $row['amount'];
+                $desc = $row['description'];
             
-    			mysql_free_result($result);
+    			$stmt->closeCursor();
 
-    			// update the occurances of this pattern
-    			$query = "UPDATE ".$dbgrouptable." SET amount=amount+1, latesttimestamp = ".time()." WHERE id=".$log_groupid;
-    			$result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_UPDATE_PATTERN_OCCURANCES));
+				// update the occurances of this pattern
+				try {
+					$query = "UPDATE ".$dbgrouptable." SET amount=amount+1, latesttimestamp = :time WHERE id=:id";
+					$stmt = $db->prepare($query);
+					$stmt->bindValue(':time', time());
+					$stmt->bindValue(':id', $log_groupid);
+					$stmt->execute();
+				} catch (PDOException $e) {
+					die(xml_for_result(FAILURE_SQL_UPDATE_PATTERN_OCCURANCES));
+				}
 
-                if ($desc != "" && $appcrashtext != "") {
-    				$desc = str_replace("'", "\'", $desc);
-                    if (strpos($desc, $appcrashtext) === false) {
-                        $appcrashtext = $desc."\n".$appcrashtext;
-                        $query = "UPDATE ".$dbgrouptable." SET description='".$appcrashtext."' WHERE id=".$log_groupid;
-                        $result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
+				if ($desc != "" && $appcrashtext != "") {
+					$desc = str_replace("'", "\'", $desc);
+					if (strpos($desc, $appcrashtext) === false) {
+						$appcrashtext = $desc."\n".$appcrashtext;
+						try {
+							$query = "UPDATE ".$dbgrouptable." SET description=:desc WHERE id=:id";
+							$stmt = $db->prepare($query);
+							$stmt->bindValue(':desc', $appcrashtext);
+							$stmt->bindValue(':id', $log_groupid);
+							$stmt->execute();
+						} catch (PDOException $e) {
+							die(end_with_result('Error in SQL '.$query));
+						}
                     }
                 }                       
 
     			// check the status of the bugfix version
-    			$query = "SELECT status FROM ".$dbversiontable." WHERE bundleidentifier = '".$crash["bundleidentifier"]."' and version = '".$row[1]."'";
-    			$result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_CHECK_BUGFIX_STATUS));
+				try {
+					$query = "SELECT status FROM ".$dbversiontable." WHERE bundleidentifier = :ident AND version = :version";
+					$stmt = $db->prepare($query);
+					$stmt->bindValue(':ident', $crash["bundleidentifier"]);
+					$stmt->bindValue(':version', $row['fix']);
+					$stmt->execute();
+				}
+				catch (PDOException $e) {
+					die(xml_for_result(FAILURE_SQL_CHECK_BUGFIX_STATUS));
+				}
 			
-    			$numrows = mysql_num_rows($result);
+    			$numrows = $stmt->rowCount();
     			if ($numrows == 1) {
-    				$row = mysql_fetch_row($result);
-    				$crash["fix_status"] = $row[0];
+    				$row = $stmt->fetch();
+    				$crash["fix_status"] = $row['status'];
     			}
 
     			if ($notify_amount_group > 1 && $notify_amount_group == $amount && $notify >= NOTIFY_ACTIVATED) {
@@ -552,14 +632,24 @@ foreach ($crashes as $crash) {
                         mail($notify_emails, $subject, $message, 'From: '.$mail_from. "\r\n");
                     }
                 }
-
-                mysql_free_result($result);
             } else if ($numrows == 0) {
                 // create a new pattern for this bug and set amount of occurrances to 1
-                $query = "INSERT INTO ".$dbgrouptable." (bundleidentifier, affected, pattern, amount, latesttimestamp, description) values ('".$crash["bundleidentifier"]."', '".$crash["version"]."', '".$crash_offset."', 1, ".time().", '".$appcrashtext."')";
-                $result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_ADD_PATTERN));
+				try {
+					$query = "INSERT INTO ".$dbgrouptable." (bundleidentifier, affected, pattern, amount, latesttimestamp, description) VALUES(:ident, :affected, :pattern, :amount, :time, :desc)";
+					$stmt = $db->prepare($query);
+					$stmt->bindValue(':ident', $crash["bundleidentifier"]);
+					$stmt->bindValue(':affected', $crash["version"]);
+					$stmt->bindValue(':pattern', $crash_offset);
+					$stmt->bindValue(':amount', 1);
+					$stmt->bindValue(':time', time());
+					$stmt->bindValue(':desc', $appcrashtext);
+					$stmt->execute();
+				}
+				catch (PDOException $e) {
+					die(xml_for_result(FAILURE_SQL_ADD_PATTERN));
+				}
 			
-    			$log_groupid = mysql_insert_id($link);
+    			$log_groupid = $db->lastInsertId($dbgrouptable.'_id_seq'); // sequence name used by postgres, ignored by others
 
     			if ($notify == NOTIFY_ACTIVATED) {
                     // send push notification
@@ -589,15 +679,41 @@ foreach ($crashes as $crash) {
     	}
 	
         // now insert the crashlog into the database
-    	$query = "INSERT INTO ".$dbcrashtable." (userid, contact, bundleidentifier, applicationname, systemversion, platform, senderversion, version, description, log, groupid, timestamp, jailbreak) values ('".$crash["userid"]."', '".$crash["contact"]."', '".$crash["bundleidentifier"]."', '".$crash["applicationname"]."', '".$crash["systemversion"]."', '".$crash["platform"]."', '".$crash["senderversion"]."', '".$crash["version"]."', '".$crash["description"]."', '".mysql_real_escape_string($crash["logdata"])."', '".$log_groupid."', '".date("Y-m-d H:i:s")."', ".$jailbreak.")";
-    	$result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_ADD_CRASHLOG));
-	
-    	$new_crashid = mysql_insert_id($link);
+    	// $query = "INSERT INTO ".$dbcrashtable." (userid, contact, bundleidentifier, applicationname, systemversion, platform, senderversion, version, description, log, groupid, timestamp, jailbreak) values ('".$crash["userid"]."', '".$crash["contact"]."', '".$crash["bundleidentifier"]."', '".$crash["applicationname"]."', '".$crash["systemversion"]."', '".$crash["platform"]."', '".$crash["senderversion"]."', '".$crash["version"]."', '".$crash["description"]."', '".mysql_real_escape_string($crash["logdata"])."', '".$log_groupid."', '".date("Y-m-d H:i:s")."', ".$jailbreak.")";
+		try {
+			$query = "INSERT INTO ".$dbcrashtable." (userid, contact, bundleidentifier, applicationname, systemversion, platform, senderversion, version, description, log, groupid, timestamp, jailbreak) values (:userid, :contact, :ident, :name, :sysversion, :platform, :senderversion, :version, :desc, :log, :groupid, :time, :jailbreak)";
+			$stmt = $db->prepare($query);
+			$stmt->bindValue(':userid', $crash["userid"]);
+			$stmt->bindValue(':contact', $crash["contact"]);
+			$stmt->bindValue(':ident', $crash["bundleidentifier"]);
+			$stmt->bindValue(':name', $crash["applicationname"]);
+			$stmt->bindValue(':sysversion', $crash["systemversion"]);
+			$stmt->bindValue(':platform', $crash["platform"]);
+			$stmt->bindValue(':senderversion', $crash["senderversion"]);
+			$stmt->bindValue(':version', $crash["version"]);
+			$stmt->bindValue(':desc', $crash["description"]);
+			$stmt->bindValue(':log', $crash["logdata"]);
+			$stmt->bindValue(':groupid', $log_groupid);
+			$stmt->bindValue(':time', date("Y-m-d H:i:s"));
+			$stmt->bindValue(':jailbreak', $jailbreak);
+			$stmt->execute();
+		} 
+		catch (PDOException $e) {
+			die(xml_for_result(FAILURE_SQL_ADD_CRASHLOG));
+		}
+		
+    	$new_crashid = $db->lastInsertId($dbcrashtable.'_id_seq');
 
     	// if this crash log has to be manually symbolicated, add a todo entry
     	if ($symbolicate) {
-    		$query = "INSERT INTO ".$dbsymbolicatetable." (crashid, done) values (".$new_crashid.", 0)";
-    		$result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_ADD_SYMBOLICATE_TODO));
+			try {
+				$query = "INSERT INTO ".$dbsymbolicatetable." (crashid, done) values (:crashid, 0)";
+				$stmt = $db->prepare($query);
+				$stmt->bindValue(':crashid', $new_crashid);
+				$stmt->execute();
+			} catch (PDOException $e) {
+				die(xml_for_result(FAILURE_SQL_ADD_SYMBOLICATE_TODO));
+			}
     	}
     	$lastError = 0;
     } else if ($acceptlog == false) {
@@ -611,7 +727,7 @@ foreach ($crashes as $crash) {
 }
 
 /* schliessen der Verbinung */
-mysql_close($link);
+// pdo will close itself
 
 /* Ausgabe der Ergebnisse in XML */
 if ($lastError != 0) {
@@ -619,4 +735,3 @@ if ($lastError != 0) {
 } else {
     echo xml_for_result($best_status);
 }
-?>
