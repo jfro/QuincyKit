@@ -120,7 +120,7 @@ $crashestime = true;
 
 $platformticks = "";
 $platformvalues = "";
-$query = "SELECT platform, COUNT(platform) FROM ".$dbcrashtable." WHERE bundleidentifier = '".$bundleidentifier."' AND version = '".$version."' AND platform != \"\" group by platform order by platform desc";
+$query = "SELECT platform, COUNT(platform) FROM ".$dbcrashtable." WHERE bundleidentifier = '".$bundleidentifier."' AND version = '".$version."' AND platform != '' group by platform order by platform desc";
 $result = query_db($query) or die(end_with_result('Error in SQL '.$query));
 $numrows = $result->rowCount();
 if ($numrows > 0) {

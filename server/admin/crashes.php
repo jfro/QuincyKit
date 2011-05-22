@@ -161,7 +161,7 @@ if ($groupid !='') {
 			
 			$platformticks = "";
 			$platformvalues = "";
-			$query2 = "SELECT platform, COUNT(platform) FROM ".$dbcrashtable.$whereclause." AND platform != \"\" group by platform order by platform desc";
+			$query2 = "SELECT platform, COUNT(platform) FROM ".$dbcrashtable.$whereclause." AND platform != '' group by platform order by platform desc";
 			$result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query2));
 			$numrows2 = result_num_rows($result2);
 			if ($numrows2 > 0) {
