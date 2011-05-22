@@ -89,11 +89,11 @@ if ($version != "")
 
 if ($groupid != "") {
 	$query = "SELECT pattern FROM ".$dbgrouptable." WHERE id = ".$groupid;
-	$result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
+	$result = query_db($query) or die(end_with_result('Error in SQL '.$query));
 
-	$numrows = mysql_num_rows($result);
+	$numrows = $result->rowCount();
 	if ($numrows == 1) {
-        $row = mysql_fetch_row($result);
+        $row = $result->fetch(PDO::FETCH_NUM);
         $title = $row[0];
         if (strlen($title) > 20) {
             $title = substr($title,0,20)."...";
@@ -102,7 +102,6 @@ if ($groupid != "") {
 	} else {
         echo create_link('Crashes', 'crashes.php', false, $pagelink).'</h2>';
 	}
-	mysql_free_result($result);
 
 } else {
     echo create_link('Crashes', 'crashes.php', false, $pagelink).'</h2>';
@@ -122,12 +121,12 @@ if ($groupid !='') {
     $cols2 = '<colgroup><col width="280"/><col width="340"/><col width="340"/></colgroup>';
 
     $query = "SELECT fix, description FROM ".$dbgrouptable." WHERE id = '".$groupid."'";
-    $result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
+    $result = query_db($query) or die(end_with_result('Error in SQL '.$query));
 
-    $numrows = mysql_num_rows($result);
+    $numrows = $result->rowCount();
     if ($numrows > 0) {
         // get the status
-        while ($row = mysql_fetch_row($result)) {
+        while ($row = $result->fetch(PDO::FETCH_NUM)) {
             $fix = $row[0];
             $description = $row[1];
             
@@ -144,11 +143,11 @@ if ($groupid !='') {
 			$osticks = "";
 			$osvalues = "";
 			$query2 = "SELECT systemversion, COUNT(systemversion) FROM ".$dbcrashtable.$whereclause." group by systemversion order by systemversion desc";
-			$result2 = mysql_query($query2) or die(end_with_result('Error in SQL '.$query2));
-			$numrows2 = mysql_num_rows($result2);
+			$result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query2));
+			$numrows2 = result_num_rows($result2);
 			if ($numrows2 > 0) {
 				// get the status
-				while ($row2 = mysql_fetch_row($result2)) {
+				while ($row2 = result_fetch_row($result2)) {
 					if ($osticks != "") $osticks = $osticks.", ";
 					$osticks .= "'".$row2[0]."'";
 					if ($osvalues != "") $osvalues = $osvalues.", ";
@@ -163,11 +162,11 @@ if ($groupid !='') {
 			$platformticks = "";
 			$platformvalues = "";
 			$query2 = "SELECT platform, COUNT(platform) FROM ".$dbcrashtable.$whereclause." AND platform != \"\" group by platform order by platform desc";
-			$result2 = mysql_query($query2) or die(end_with_result('Error in SQL '.$query2));
-			$numrows2 = mysql_num_rows($result2);
+			$result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query2));
+			$numrows2 = result_num_rows($result2);
 			if ($numrows2 > 0) {
 				// get the status
-				while ($row2 = mysql_fetch_row($result2)) {
+				while ($row2 = result_fetch_row($result2)) {
 					if ($platformticks != "") $platformticks = $platformticks.", ";
 					$platformticks .= "'".mapPlatform($row2[0])."'";
 					if ($platformvalues != "") $platformvalues = $platformvalues.", ";
@@ -192,10 +191,10 @@ if ($groupid !='') {
             // get the amount of crashes
             $amount = 0;
             $query2 = "SELECT count(*) FROM ".$dbcrashtable.$whereclause;
-            $result2 = mysql_query($query2) or die(end_with_result('Error in SQL '.$query2));
-            $numrows2 = mysql_num_rows($result2);
+            $result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query2));
+            $numrows2 = result_num_rows($result2);
             if ($numrows2 == 1) {
-                $row2 = mysql_fetch_row($result2);
+                $row2 = result_fetch_row($result2);
                 $amount = $row2[0];
             }
             mysql_free_result($result2);
@@ -210,12 +209,12 @@ echo '<tbody>';
 
 // get all crashes
 $query = "SELECT userid, contact, systemversion, timestamp, id, jailbreak, platform FROM ".$dbcrashtable.$whereclause." ORDER BY systemversion desc, timestamp desc";
-$result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
+$result = query_db($query) or die(end_with_result('Error in SQL '.$query));
 
-$numrows = mysql_num_rows($result);
+$numrows = result_num_rows($result);
 if ($numrows > 0) {
 	// get the status
-	while ($row = mysql_fetch_row($result)) {
+	while ($row = result_fetch_row($result)) {
 		$userid = $row[0];
 		$contact = $row[1];
 		$systemversion = $row[2];
@@ -226,12 +225,12 @@ if ($numrows > 0) {
 				
 		$todo = 2;
 		$query2 = "SELECT done FROM ".$dbsymbolicatetable." WHERE crashid = ".$crashid;
-		$result2 = mysql_query($query2) or die(end_with_result('Error in SQL '.$query));
+		$result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query));
 
-		$numrows2 = mysql_num_rows($result2);
+		$numrows2 = result_num_rows($result2);
 		if ($numrows2 > 0)
 		{
-			$row2 = mysql_fetch_row($result2);
+			$row2 = result_fetch_row($result2);
 			$todo = $row2[0];
 		}
 		mysql_free_result($result2);

@@ -79,12 +79,12 @@ if (!isset($version)) $version = "";
 if ($bundleidentifier == "" || $version == "") die(end_with_result('Wrong parameters'));
 
 $query1 = "SELECT id, applicationname FROM ".$dbcrashtable." WHERE groupid = 0 and version = '".$version."' and bundleidentifier = '".$bundleidentifier."'";
-$result1 = mysql_query($query1) or die(end_with_result('Error in SQL '.$query1));
+$result1 = query_db($query1) or die(end_with_result('Error in SQL '.$query1));
 
-$numrows1 = mysql_num_rows($result1);
+$numrows1 = result_num_rows($result1);
 if ($numrows1 > 0) {
     // get the status
-    while ($row1 = mysql_fetch_row($result1)) {
+    while ($row1 = result_fetch_row($result1)) {
         $crashid = $row1[0];
         $applicationname = $row1[1];
 	    
@@ -92,12 +92,12 @@ if ($numrows1 > 0) {
         $logdata = "";
 
    	    $query = "SELECT log FROM ".$dbcrashtable." WHERE id = '".$crashid."' ORDER BY systemversion desc, timestamp desc LIMIT 1";
-        $result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
+        $result = query_db($query) or die(end_with_result('Error in SQL '.$query));
 
-        $numrows = mysql_num_rows($result);
+        $numrows = result_num_rows($result);
         if ($numrows > 0) {
             // get the status
-            $row = mysql_fetch_row($result);
+            $row = result_fetch_row($result);
             $logdata = $row[0];
 	
             mysql_free_result($result);
@@ -150,15 +150,15 @@ if ($numrows1 > 0) {
     
         // check if the version is already added and the status of the version and notify status
         $query = "SELECT id, status, notify FROM ".$dbversiontable." WHERE bundleidentifier = '".$bundleidentifier."' and version = '".$version."'";
-        $result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_CHECK_VERSION_EXISTS));
+        $result = query_db($query) or die(xml_for_result(FAILURE_SQL_CHECK_VERSION_EXISTS));
     
-        $numrows = mysql_num_rows($result);
+        $numrows = result_num_rows($result);
         if ($numrows == 0) {
             // version is not available, so add it with status VERSION_STATUS_AVAILABLE
             $query = "INSERT INTO ".$dbversiontable." (bundleidentifier, version, status, notify) values ('".$bundleidentifier."', '".$version."', ".VERSION_STATUS_UNKNOWN.", ".$notify_default_version.")";
-            $result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_ADD_VERSION));
+            $result = query_db($query) or die(xml_for_result(FAILURE_SQL_ADD_VERSION));
         } else {
-            $row = mysql_fetch_row($result);
+            $row = result_fetch_row($result);
             $version_status = $row[1];
             $notify = $row[2];
             mysql_free_result($result);
@@ -169,14 +169,14 @@ if ($numrows1 > 0) {
         {
             // get all the known bug patterns for the current app version
             $query = "SELECT id, fix, amount FROM ".$dbgrouptable." WHERE affected = '".$version."' and pattern = '".mysql_real_escape_string($crash_offset)."'";
-            $result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_FIND_KNOWN_PATTERNS));
+            $result = query_db($query) or die(xml_for_result(FAILURE_SQL_FIND_KNOWN_PATTERNS));
     
-            $numrows = mysql_num_rows($result);
+            $numrows = result_num_rows($result);
             
             if ($numrows == 1)
             {
                 // assign this bug to the group
-                $row = mysql_fetch_row($result);
+                $row = result_fetch_row($result);
                 $log_groupid = $row[0];
                 $amount = $row[2];
     
@@ -184,16 +184,16 @@ if ($numrows1 > 0) {
     
                 // update the occurances of this pattern
                 $query = "UPDATE ".$dbgrouptable." SET amount=amount+1 WHERE id=".$log_groupid;
-                $result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_UPDATE_PATTERN_OCCURANCES));
+                $result = query_db($query) or die(xml_for_result(FAILURE_SQL_UPDATE_PATTERN_OCCURANCES));
     
                 // check the status of the bugfix version
                 $query = "SELECT status FROM ".$dbversiontable." WHERE bundleidentifier = '".$bundleidentifier."' and version = '".$row[1]."'";
-                $result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_CHECK_BUGFIX_STATUS));
+                $result = query_db($query) or die(xml_for_result(FAILURE_SQL_CHECK_BUGFIX_STATUS));
                 
-                $numrows = mysql_num_rows($result);
+                $numrows = result_num_rows($result);
                 if ($numrows == 1)
                 {
-                    $row = mysql_fetch_row($result);
+                    $row = result_fetch_row($result);
                     $fix_status = $row[0];
                 }
     
@@ -229,7 +229,7 @@ if ($numrows1 > 0) {
             } else if ($numrows == 0) {
                 // create a new pattern for this bug and set amount of occurrances to 1
                 $query = "INSERT INTO ".$dbgrouptable." (bundleidentifier, affected, pattern, amount) values ('".$bundleidentifier."', '".$version."', '".$crash_offset."', 1)";
-                $result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_ADD_PATTERN));
+                $result = query_db($query) or die(xml_for_result(FAILURE_SQL_ADD_PATTERN));
     
                 $log_groupid = mysql_insert_id($link);
     
@@ -268,7 +268,7 @@ if ($numrows1 > 0) {
         {
             // now insert the crashlog into the database
             $query = "UPDATE ".$dbcrashtable." SET groupid=".$log_groupid." WHERE id=".$crashid;
-            $result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_ADD_CRASHLOG));        
+            $result = query_db($query) or die(xml_for_result(FAILURE_SQL_ADD_CRASHLOG));        
         }
         
     }

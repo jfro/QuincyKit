@@ -415,7 +415,7 @@ foreach ($crashes as $crash) {
 		catch(PDOException $e) {
 			die(xml_for_result(FAILURE_SQL_SEARCH_APP_NAME));
 		}
-	    // $result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_SEARCH_APP_NAME));
+	    // $result = query_db($query) or die(xml_for_result(FAILURE_SQL_SEARCH_APP_NAME));
 	}
 
 
@@ -465,10 +465,11 @@ foreach ($crashes as $crash) {
 			$query = "SELECT id, status, notify FROM ".$dbversiontable." WHERE bundleidentifier = ? and version = ?";
 			$stmt = $db->prepare($query);
 			$stmt->bindValue(1, $crash["bundleidentifier"]);
-			$stmt->bindValue(1, $crash['version']);
+			$stmt->bindValue(2, $crash['version']);
 			$stmt->execute();
 		}
 		catch (PDOException $e) {
+			error_log($e->getMessage());
 			die(xml_for_result(FAILURE_SQL_CHECK_VERSION_EXISTS));
 		}
     	// $result = mysql_query($query) or die(xml_for_result(FAILURE_SQL_CHECK_VERSION_EXISTS));

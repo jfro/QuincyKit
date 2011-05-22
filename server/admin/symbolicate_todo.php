@@ -57,11 +57,11 @@ foreach(array_keys($_GET) as $k) {
 $crashids = "";
 
 $query = "SELECT crashid FROM ".$dbsymbolicatetable." WHERE done = 0";
-$result = mysql_query($query) or die(end_with_result('Error in SQL '.$dbsymbolicatetable));
+$result = query_db($query) or die(end_with_result('Error in SQL '.$dbsymbolicatetable));
 
-$numrows = mysql_num_rows($result);
+$numrows = result_num_rows($result);
 if ($numrows > 0) {
-	while ($row = mysql_fetch_row($result))
+	while ($row = result_fetch_row($result))
 	{
 		if ($crashids != '')
 			$crashids .= ',';

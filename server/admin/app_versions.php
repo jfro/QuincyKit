@@ -55,37 +55,38 @@ if (!isset($deletecrashes)) $deletecrashes = -1;
 
 // add the new app & version
 if ($version != "" && $deletecrashes == "1") {
-	$query = "DELETE FROM ".$dbsymbolicatetable." WHERE crashid in (select id from ".$dbcrashtable." where bundleidentifier = '".$bundleidentifier."' and version = '".$version."')";
-	$result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
+	$query = "DELETE FROM ".$dbsymbolicatetable." WHERE crashid in (select id from ".$dbcrashtable." where bundleidentifier = ? and version = ?)";
+	$query_args = array($bundleidentifier, $version);
+	$result = query_db($query, $query_args) or die(end_with_result('Error in SQL '.$query));
 
 	$query = "DELETE FROM ".$dbcrashtable." WHERE bundleidentifier = '".$bundleidentifier."' and version = '".$version."'";
-	$result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
+	$result = query_db($query) or die(end_with_result('Error in SQL '.$query));
 	
     $query = "DELETE FROM ".$dbgrouptable." WHERE bundleidentifier = '".$bundleidentifier."' and affected = '".$version."'";
-    $result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
+    $result = query_db($query) or die(end_with_result('Error in SQL '.$query));
 } else if ($bundleidentifier != "" && $status != "" && $id == "" && $version != "") {
-	$query = "SELECT id FROM ".$dbversiontable." WHERE bundleidentifier = '".$bundleidentifier."' and version = '".$row[1]."'";
-	$result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
+	$query = "SELECT id FROM ".$dbversiontable." WHERE bundleidentifier = '".$bundleidentifier."' and version = '".$version."'";
+	$result = query_db($query) or die(end_with_result('Error in SQL '.$query));
 	
-	$numrows = mysql_num_rows($result);
+	$numrows = $result->queryCount();
 	if ($numrows == 1)
 	{
-		$row = mysql_fetch_row($result);
+		$row = $result->fetch(PDO::FETCH_NUM);
 		$query2 = "UPDATE ".$dbversiontable." SET status = ".$status." WHERE id = ".$row[0];
-		$result2 = mysql_query($query2) or die(end_with_result('Error in SQL '.$query2));
+		$result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query2));
 	} else if ($numrows == 0) {
 		// version is not available, so add it with status VERSION_STATUS_AVAILABLE
 		$query2 = "INSERT INTO ".$dbversiontable." (bundleidentifier, version, status) values ('".$bundleidentifier."', '".$version."', ".$status.")";
-		$result2 = mysql_query($query2) or die(end_with_result('Error in SQL '.$query2));
+		$result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query2));
 	}
-	mysql_free_result($result);
+	// mysql_free_result($result);
 } else if ($id != "" && ($status != "" || $notify != "")) {
 	$query = "UPDATE ".$dbversiontable." SET status = ".$status.", notify = ".$notify." WHERE id = ".$id;
-	$result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
+	$result = query_db($query) or die(end_with_result('Error in SQL '.$query));
 } else if ($id != "" && $status == "") {
 	// delete a version
 	$query = "DELETE FROM ".$dbversiontable." WHERE id = '".$id."'";
-	$result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
+	$result = query_db($query) or die(end_with_result('Error in SQL '.$query));
 }
 
 show_header('- App Versions');
@@ -111,11 +112,14 @@ echo "<td><div id=\"osdiv\" style=\"height:280px;width:310px; \"></div></td></tr
 // get the amount of crashes per system version
 $crashestime = true;
 
-$query = "SELECT timestamp FROM ".$dbcrashtable."  WHERE bundleidentifier = '".$bundleidentifier."' ORDER BY timestamp desc";
-$result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
-$numrows = mysql_num_rows($result);
+$query = "SELECT timestamp FROM ".$dbcrashtable."  WHERE bundleidentifier = :ident ORDER BY timestamp desc";
+$stmt = $link->prepare($query);
+$stmt->bindValue(':ident', $bundleidentifier);
+$stmt->execute();
+// $result = query_db($query) or die(end_with_result('Error in SQL '.$query));
+$numrows = $stmt->rowCount();
 if ($numrows > 0) {
-    while ($row = mysql_fetch_row($result)) {
+    while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
         $timestamp = $row[0];
         
         if ($timestamp != "" && ($timestampvalue = strtotime($timestamp)) !== false)
@@ -129,43 +133,49 @@ if ($numrows > 0) {
         }
     }
 }
-mysql_free_result($result);
+// mysql_free_result($result);
 
 
 $osticks = "";
 $osvalues = "";
-$query2 = "SELECT systemversion, COUNT(systemversion) FROM ".$dbcrashtable.$whereclause." WHERE bundleidentifier = '".$bundleidentifier."' group by systemversion order by systemversion desc";
-$result2 = mysql_query($query2) or die(end_with_result('Error in SQL '.$query2));
-$numrows2 = mysql_num_rows($result2);
+$query2 = "SELECT systemversion, COUNT(systemversion) FROM ".$dbcrashtable." WHERE bundleidentifier = :ident group by systemversion order by systemversion desc";
+$stmt2 = $link->prepare($query2);
+$stmt2->bindValue(':ident', $bundleidentifier);
+$stmt2->execute();
+// $result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query2));
+$numrows2 = $stmt2->rowCount();
 if ($numrows2 > 0) {
 	// get the status
-	while ($row2 = mysql_fetch_row($result2)) {
+	while ($row2 = $stmt2->fetch(PDO::FETCH_NUM)) {
 		if ($osticks != "") $osticks = $osticks.", ";
 		$osticks .= "'".$row2[0]."'";
 		if ($osvalues != "") $osvalues = $osvalues.", ";
 		$osvalues .= $row2[1];
 	}
 }
-mysql_free_result($result2);
+// mysql_free_result($result2);
 
 // get the amount of crashes per system version
 $crashestime = true;
 
 $platformticks = "";
 $platformvalues = "";
-$query = "SELECT platform, COUNT(platform) FROM ".$dbcrashtable." WHERE bundleidentifier = '".$bundleidentifier."' AND platform != \"\" group by platform order by platform desc";
-$result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
-$numrows = mysql_num_rows($result);
+$query = "SELECT platform, COUNT(platform) FROM ".$dbcrashtable." WHERE bundleidentifier = :ident AND platform != \"\" group by platform order by platform desc";
+$stmt = $link->prepare($query);
+$stmt->bindValue(':ident', $bundleidentifier);
+$stmt->execute();
+// $result = query_db($query) or die(end_with_result('Error in SQL '.$query));
+$numrows = $stmt->rowCount();
 if ($numrows > 0) {
 	// get the status
-	while ($row = mysql_fetch_row($result)) {
+	while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
 		if ($platformticks != "") $platformticks = $platformticks.", ";
 		$platformticks .= "'".mapPlatform($row[0])."'";
 		if ($platformvalues != "") $platformvalues = $platformvalues.", ";
 		$platformvalues .= $row[1];
 	}
 }
-mysql_free_result($result);
+// mysql_free_result($result);
 
 echo '</table>';
 
@@ -222,14 +232,17 @@ echo '</table></form>';
 if ($acceptallapps)
 	$query = "SELECT bundleidentifier, version, status, notify, id FROM ".$dbversiontable." ORDER BY bundleidentifier asc, version desc, status desc";
 else
-	$query = "SELECT bundleidentifier, version, status, notify, id FROM ".$dbversiontable." WHERE bundleidentifier = '".$bundleidentifier."' ORDER BY bundleidentifier asc, version desc, status desc";
+	$query = "SELECT bundleidentifier, version, status, notify, id FROM ".$dbversiontable." WHERE bundleidentifier = :ident ORDER BY bundleidentifier asc, version desc, status desc";
+$stmt = $link->prepare($query);
+if(!$acceptallapps)
+	$stmt->bindValue(':ident', $bundleidentifier);
+$stmt->execute();
+// $result = query_db($query) or die(end_with_result('Error in SQL '.$query));
 
-$result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
-
-$numrows = mysql_num_rows($result);
+$numrows = $stmt->rowCount();
 if ($numrows > 0) {
 	// get the status
-	while ($row = mysql_fetch_row($result))
+	while ($row = $stmt->fetch(PDO::FETCH_NUM))
 	{
 		$bundleidentifier = $row[0];
 		$version = $row[1];
@@ -240,27 +253,35 @@ if ($numrows > 0) {
 		$totalcrashes = 0;
 		
 		// get the number of groups
-		$query2 = "SELECT count(*) FROM ".$dbgrouptable." WHERE bundleidentifier = '".$bundleidentifier."' and affected = '".$version."'";
-		$result2 = mysql_query($query2) or die(end_with_result('Error in SQL '.$$query2));
+		$query2 = "SELECT count(*) FROM ".$dbgrouptable." WHERE bundleidentifier = :ident and affected = :affected";
+		$stmt2 = $link->prepare($query2);
+		$stmt2->bindValue(':ident', $bundleidentifier);
+		$stmt2->bindValue(':affected', $version);
+		$stmt2->execute();
+		// $result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query2));
 		
-		$numrows2 = mysql_num_rows($result2);
+		$numrows2 = $stmt2->rowCount();
 		if ($numrows2 > 0) {
-			$row2 = mysql_fetch_row($result2);
+			$row2 = $stmt2->fetch(PDO::FETCH_NUM);
 			$groups = $row2[0];
 			
-			mysql_free_result($result2);
+			// mysql_free_result($result2);
 		}
 
 		// get the total number of crashes
-		$query2 = "SELECT count(*) FROM ".$dbcrashtable." WHERE bundleidentifier = '".$bundleidentifier."' and version = '".$version."'";
-		$result2 = mysql_query($query2) or die(end_with_result('Error in SQL '.$query2));
+		$query2 = "SELECT count(*) FROM ".$dbcrashtable." WHERE bundleidentifier = :ident and version = :version";
+		$stmt2 = $link->prepare($query2);
+		$stmt2->bindValue(':ident', $bundleidentifier);
+		$stmt2->bindValue(':version', $version);
+		$stmt2->execute();
+		// $result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query2));
 		
-		$numrows2 = mysql_num_rows($result2);
+		$numrows2 = $stmt2->rowCount();
 		if ($numrows2 > 0) {
-			$row2 = mysql_fetch_row($result2);
+			$row2 = $stmt2->fetch(PDO::FETCH_NUM);
 			$totalcrashes = $row2[0];
 			
-			mysql_free_result($result2);
+			// mysql_free_result($result2);
 		}
 		
 		echo "<form name='update".$id."' action='app_versions.php' method='get'><input type='hidden' name='id' value='".$id."'/><input type='hidden' name='bundleidentifier' value='".$bundleidentifier."'/>";
@@ -301,18 +322,22 @@ if ($numrows > 0) {
 		if ($totalcrashes == 0 && $groups == 0)
 		{
 			// only show delete button if this version is nowwhere assigned as fix version
-			$query2 = "SELECT count(*) FROM ".$dbgrouptable." WHERE bundleidentifier = '".$bundleidentifier."' and fix = '".$version."'";
-			$result2 = mysql_query($query2) or die(end_with_result('Error in SQL '.$query2));
-			$numrows2 = mysql_num_rows($result2);
+			$query2 = "SELECT count(*) FROM ".$dbgrouptable." WHERE bundleidentifier = :ident and fix = :fix";
+			$stmt2 = $link->prepare($query2);
+			$stmt2->bindValue(':ident', $bundleidentifier);
+			$stmt2->bindValue(':fix', $version);
+			$stmt2->execute();
+			// $result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query2));
+			$numrows2 = $stmt2->rowCount();
 			$showdelete = false;
 			if ($numrows2 > 0) {
-				$row2 = mysql_fetch_row($result2);
+				$row2 = $stmt2->fetch(PDO::FETCH_NUM);
 				if ($row2[0] == 0)
 				{
 				    $showdelete = true;
 				}
 				
-				mysql_free_result($result2);
+				// mysql_free_result($result2);
 			}
 			
 			if ($showdelete == true || $version == "")
@@ -325,10 +350,10 @@ if ($numrows > 0) {
 		echo "</td></tr></table></form>";
 	}
 	
-	mysql_free_result($result);
+	// mysql_free_result($result);
 }
 
-mysql_close($link);
+// mysql_close($link);
 
 ?>
 

@@ -59,19 +59,24 @@ if (!isset($emails)) $emails = "";
 $query = "";
 // update the app
 if ($id != "" && $symbolicate != "") {
-	$query = "UPDATE ".$dbapptable." SET symbolicate = ".$symbolicate.", name = '".$name."', issuetrackerurl = '".$issuetrackerurl."', hockeyappidentifier = '".$hockeyappidentifier."', notifyemail = '".$emails."', notifypush = '".$pushids."' WHERE id = ".$id;
+	$query = "UPDATE ".$dbapptable." SET symbolicate = ?, name = ?, issuetrackerurl = ?, hockeyappidentifier = ?, notifyemail = ?, notifypush = ? WHERE id = ?";
+	$query_args = array($symbolicate, $name, $issuetrackerurl, $hockeyappidentifier, $emails, $pushids, $id);
 } else if ($bundleidentifier != "" && $id == "" && $symbolicate != "") {
 	// insert new app
 	// version is not available, so add it with status VERSION_STATUS_AVAILABLE
-	$query = "INSERT INTO ".$dbapptable." (bundleidentifier, name, symbolicate, issuetrackerurl, notifyemail, notifypush, hockeyappidentifier) values ('".$bundleidentifier."', '".$name."', ".$symbolicate.", '".$issuetrackerurl."', '".$emails."', '".$pushids."', '".$hockeyappidentifier."')";
+	$query = "INSERT INTO ".$dbapptable." (bundleidentifier, name, symbolicate, issuetrackerurl, notifyemail, notifypush, hockeyappidentifier) values (?, ?, ?, ?, ?, ?, ?)";
+	$query_args = array($bundleidentifier, $name, $symbolicate, $issuetrackerurl, $emails, $pushids, $hockeyappidentifier);
 } else if ($symbolicate != "" && $id != "") {
-	$query = "UPDATE ".$dbapptable." SET symbolicate = ".$symbolicate." WHERE id = ".$id;
+	$query = "UPDATE ".$dbapptable." SET symbolicate = ? WHERE id = ?";
+	$query_args = array($symbolicate, $id);
 } else if ($id != "" && $symbolicate == "") {
 	// delete a version
-	$query = "DELETE FROM ".$dbapptable." WHERE id = ".$id;
+	$query = "DELETE FROM ".$dbapptable." WHERE id = ?";
+	$query_args = array($id);
 }
 if ($query != "")
-	$result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
+	$stmt = query_db($query, $query_args);
+	// $stmt = $link->query($query); // TODO: change to proper prepare later
 
 show_header('- Apps');
 
@@ -111,12 +116,14 @@ if (!$acceptallapps)
 
 // get all applications and their symbolication status
 $query = "SELECT bundleidentifier, symbolicate, id, name, issuetrackerurl, notifyemail, notifypush, hockeyappidentifier FROM ".$dbapptable." ORDER BY bundleidentifier asc, symbolicate desc";
-$result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
+$stmt = $link->prepare($query);
+$stmt->execute();
+// $result = query_db($query) or die(end_with_result('Error in SQL '.$query));
 
-$numrows = mysql_num_rows($result);
+$numrows = $stmt->rowCount();
 if ($numrows > 0) {
 	// get the status
-	while ($row = mysql_fetch_row($result))
+	while ($row = $stmt->fetch(PDO::FETCH_NUM))
 	{
 		$bundleidentifier = $row[0];
 		$symbolicate = $row[1];
@@ -153,16 +160,19 @@ if ($numrows > 0) {
 		echo "</select><br/>";
 		
 		// get the total number of crashes
-        $query2 = "SELECT count(*) FROM ".$dbcrashtable." WHERE bundleidentifier = '".$bundleidentifier."'";
-        $result2 = mysql_query($query2) or die(end_with_result('Error in SQL '.$query2));
+		//         $query2 = "SELECT count(*) FROM ".$dbcrashtable." WHERE bundleidentifier = :ident";
+		// $stmt2 = $link->prepare($query2);
+		// $stmt2->bindValue(':ident', $bundleidentifier);
+		$stmt2 = query_db("SELECT count(*) FROM ".$dbcrashtable." WHERE bundleidentifier = ?", $bundleidentifier);
+        // $result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query2));
 
         $totalcrashes = 0;
-        $numrows2 = mysql_num_rows($result2);
+        $numrows2 = $stmt2->rowCount();
         if ($numrows2 > 0) {
-            $row2 = mysql_fetch_row($result2);
+            $row2 = $stmt2->fetch(PDO::FETCH_NUM);
             $totalcrashes = $row2[0];
             
-            mysql_free_result($result2);
+            // mysql_free_result($result2);
         }
         
         echo $totalcrashes . "</td>";
@@ -172,10 +182,10 @@ if ($numrows > 0) {
 		echo "</tr></table></form>";
 	}
 	
-	mysql_free_result($result);
+	// mysql_free_result($result);
 }
 
-mysql_close($link);
+// mysql_close($link);
 
 echo '</body></html>';
 

@@ -70,10 +70,10 @@ $crashvalues = "";
 // get the amount of crashes over time
 
 $query = "SELECT timestamp FROM ".$dbcrashtable."  WHERE bundleidentifier = '".$bundleidentifier."' AND version = '".$version."' ORDER BY timestamp desc";
-$result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
-$numrows = mysql_num_rows($result);
+$result = query_db($query) or die(end_with_result('Error in SQL '.$query));
+$numrows = $result->rowCount();
 if ($numrows > 0) {
-  while ($row = mysql_fetch_row($result)) {
+  while ($row = $result->fetch(PDO::FETCH_NUM)) {
     $timestamp = $row[0];
         
     if ($timestamp != "" && ($timestampvalue = strtotime($timestamp)) !== false)
@@ -87,7 +87,6 @@ if ($numrows > 0) {
     }
   }
 }
-mysql_free_result($result);
 
 
 $cols2 = '<colgroup><col width="320"/><col width="320"/><col width="320"/></colgroup>';
@@ -103,11 +102,11 @@ $crashestime = true;
 $osticks = "";
 $osvalues = "";
 $query2 = "SELECT systemversion, COUNT(systemversion) FROM ".$dbcrashtable.$whereclause." WHERE bundleidentifier = '".$bundleidentifier."' AND version = '".$version."' group by systemversion order by systemversion desc";
-$result2 = mysql_query($query2) or die(end_with_result('Error in SQL '.$query2));
-$numrows2 = mysql_num_rows($result2);
+$result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query2));
+$numrows2 = $result2->rowCount();
 if ($numrows2 > 0) {
 	// get the status
-	while ($row2 = mysql_fetch_row($result2)) {
+	while ($row2 = $result2->fetch(PDO::FETCH_NUM)) {
 		if ($osticks != "") $osticks = $osticks.", ";
 		$osticks .= "'".$row2[0]."'";
 		if ($osvalues != "") $osvalues = $osvalues.", ";
@@ -122,18 +121,17 @@ $crashestime = true;
 $platformticks = "";
 $platformvalues = "";
 $query = "SELECT platform, COUNT(platform) FROM ".$dbcrashtable." WHERE bundleidentifier = '".$bundleidentifier."' AND version = '".$version."' AND platform != \"\" group by platform order by platform desc";
-$result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
-$numrows = mysql_num_rows($result);
+$result = query_db($query) or die(end_with_result('Error in SQL '.$query));
+$numrows = $result->rowCount();
 if ($numrows > 0) {
 	// get the status
-	while ($row = mysql_fetch_row($result)) {
+	while ($row = $result->fetch(PDO::FETCH_NUM)) {
 		if ($platformticks != "") $platformticks = $platformticks.", ";
 		$platformticks .= "'".mapPlatform($row[0])."'";
 		if ($platformvalues != "") $platformvalues = $platformvalues.", ";
 		$platformvalues .= $row[1];
 	}
 }
-mysql_free_result($result);
 echo '</table>';
 
 
@@ -161,12 +159,12 @@ echo '<div id="groups">';
 
 // get all groups
 $query = "SELECT fix, pattern, amount, id, description, latesttimestamp FROM ".$dbgrouptable." WHERE bundleidentifier = '".$bundleidentifier."' AND affected = '".$version."' ORDER BY fix desc, amount desc, pattern asc";
-$result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
+$result = query_db($query) or die(end_with_result('Error in SQL '.$query));
 
-$numrows = mysql_num_rows($result);
+$numrows = $result->rowCount();
 if ($numrows > 0) {
 	// get the status
-	while ($row = mysql_fetch_row($result))
+	while ($row = $result->fetch(PDO::FETCH_NUM))
 	{
 		$fix = $row[0];
 		$pattern = $row[1];
@@ -220,11 +218,11 @@ if ($numrows > 0) {
 
 // get all bugs not assigned to groups
 $query = "SELECT count(*) FROM ".$dbcrashtable." WHERE groupid = 0 and bundleidentifier = '".$bundleidentifier."' AND version = '".$version."'";
-$result = mysql_query($query) or die(end_with_result('Error in SQL '.$dbcrashtable));
+$result = query_db($query) or die(end_with_result('Error in SQL '.$dbcrashtable));
 
-$numrows = mysql_num_rows($result);
+$numrows = $result->rowCount();
 if ($numrows > 0) {
-	$row = mysql_fetch_row($result);
+	$row = $result->fetch(PDO::FETCH_NUM);
 	$amount = $row[0];
 	if ($amount > 0)
 	{

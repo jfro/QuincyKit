@@ -70,6 +70,7 @@ try {
         $db = new PDO($dbtype.':'.$base); //sqlite:dbpath
     else
         $db = new PDO($dbtype.":host=".$server.';dbname='.$base, $loginsql, $passsql); //mysql:host=localhost;dbname=testdb
+	echo 'passed';
 }
 catch(PDOException $e) {
     echo 'failed: '.$e->getMessage();

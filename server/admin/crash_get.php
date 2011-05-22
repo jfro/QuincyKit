@@ -58,11 +58,11 @@ if (!isset($id)) $id = "";
 if ($id == "") die(end_with_result('Wrong parameters'));
 
 $query = "SELECT log FROM ".$dbcrashtable." WHERE id = ".$id;
-$result = mysql_query($query) or die(end_with_result('Error in SQL '.$dbversiontable));
+$result = query_db($query) or die(end_with_result('Error in SQL '.$dbversiontable));
 
-$numrows = mysql_num_rows($result);
+$numrows = result_num_rows($result);
 if ($numrows > 0) {
-	while ($row = mysql_fetch_row($result))
+	while ($row = result_fetch_row($result))
 	{
 		echo $row[0];
 	}

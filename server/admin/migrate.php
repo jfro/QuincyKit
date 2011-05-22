@@ -45,28 +45,28 @@ $link = mysql_connect($server, $loginsql, $passsql);
 $con = mysql_select_db($base, $link);
 
 $query = "ALTER TABLE ".$dbgrouptable." ADD COLUMN latesttimestamp BIGINT";
-$result = mysql_query($query) or die(end_with_result('Error in SQL: '.$query));
+$result = query_db($query) or die(end_with_result('Error in SQL: '.$query));
 
 $query = "CREATE INDEX latesttimestamp ON ".$dbgrouptable." (latesttimestamp)";
-$result = mysql_query($query) or die(end_with_result('Error in SQL: '.$query));
+$result = query_db($query) or die(end_with_result('Error in SQL: '.$query));
 
 $query = "SELECT bundleidentifier, version FROM ".$dbversiontable;
-$result = mysql_query($query) or die(end_with_result('Error in SQL: '.$query));
+$result = query_db($query) or die(end_with_result('Error in SQL: '.$query));
 
-$numrows = mysql_num_rows($result);
+$numrows = result_num_rows($result);
 if ($numrows > 0) {
 	// get the status
-	while ($row = mysql_fetch_row($result)) {
+	while ($row = result_fetch_row($result)) {
 		$bundleidentifier = $row[0];
 		$version = $row[1];
 
     $query1 = "SELECT id, amount, latesttimestamp FROM ".$dbgrouptable." WHERE bundleidentifier = '".$bundleidentifier."' AND affected = '".$version."'";
-    $result1 = mysql_query($query1) or die(end_with_result('Error in SQL: '.$query1));
+    $result1 = query_db($query1) or die(end_with_result('Error in SQL: '.$query1));
 
-    $numrows1 = mysql_num_rows($result1);
+    $numrows1 = result_num_rows($result1);
     if ($numrows1 > 0) {
     	// get the status
-    	while ($row1 = mysql_fetch_row($result1)) {
+    	while ($row1 = result_fetch_row($result1)) {
     		$groupid = $row1[0];
     		$amount = $row1[1];
     		$latest = $row1[2];
@@ -74,17 +74,17 @@ if ($numrows > 0) {
 		
     		if ($amount > 0 && $latest == 0) {
           $query2 = "SELECT max(UNIX_TIMESTAMP(timestamp)) FROM ".$dbcrashtable." WHERE groupid = '".$groupid."'";
-          $result2 = mysql_query($query2) or die(end_with_result('Error in SQL '.$query2));
-          $numrows2 = mysql_num_rows($result2);
+          $result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query2));
+          $numrows2 = result_num_rows($result2);
           if ($numrows2 > 0) {
-            $row2 = mysql_fetch_row($result2);
+            $row2 = result_fetch_row($result2);
             $lastupdate = $row2[0];
           }
           mysql_free_result($result2);
             
           if ($lastupdate != '') {
             $query2 = "UPDATE ".$dbgrouptable." SET latesttimestamp = ".$lastupdate." WHERE id = ".$groupid;
-            $result2 = mysql_query($query2) or die(end_with_result('Error in SQL '.$query2));
+            $result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query2));
           }
     		}
       }

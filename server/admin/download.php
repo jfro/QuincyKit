@@ -63,12 +63,12 @@ if ($groupid != "") {
 } else {
 	$query = "SELECT userid, contact, systemversion, description, log, timestamp FROM ".$dbcrashtable." WHERE id = '".$crashid."' ORDER BY systemversion desc, timestamp desc LIMIT 1";
 }
-$result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
+$result = query_db($query) or die(end_with_result('Error in SQL '.$query));
 
-$numrows = mysql_num_rows($result);
+$numrows = result_num_rows($result);
 if ($numrows > 0) {
 	// get the status
-	$row = mysql_fetch_row($result);
+	$row = result_fetch_row($result);
 	$userid = $row[0];
 	$contact = $row[1];
 	$systemversion = $row[2];

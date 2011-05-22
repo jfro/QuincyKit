@@ -68,10 +68,47 @@ function end_with_result($result)
 
 function init_database()
 {
-    global $server, $loginsql, $passsql, $base;
+    global $dbtype, $server, $loginsql, $passsql, $base;
 
-    $GLOBALS['link'] = mysql_connect($server, $loginsql, $passsql) or die(end_with_result('No database connection'));
-    mysql_select_db($base) or die(end_with_result('No database connection'));
+    // $GLOBALS['link'] = mysql_connect($server, $loginsql, $passsql) or die(end_with_result('No database connection'));
+    // mysql_select_db($base) or die(end_with_result('No database connection'));
+	try {
+		if($dbtype == 'sqlite')
+			$db = new PDO($dbtype.':'.$base); //sqlite:dbpath
+		else
+			$db = new PDO($dbtype.":host=".$server.';dbname='.$base, $loginsql, $passsql); //mysql:host=localhost;dbname=testdb
+	}
+	catch(PDOException $e) {
+		die(end_with_result('No database connection'));
+	}
+	$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); // prefer exceptions
+	$db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC); // prefer associative arrays
+	$GLOBALS['link'] = $db;
+}
+
+function query_db($query) {
+	global $link;
+	$args = array_slice(func_get_args(), 1); // $query is 0
+	if(count($args) && is_array($args[0])) {
+		$args = $args[0];
+	}
+	$stmt = $link->prepare($query);
+	$i = 1;
+	foreach($args as $arg) {
+		$stmt->bindValue($i, $arg);
+		$i++;
+	}
+	if(!$stmt->execute())
+		return false;
+	return $stmt;
+}
+
+function result_num_rows($result) {
+	return $result->rowCount();
+}
+
+function result_fetch_row($result) {
+	return $result->fetch(PDO::FETCH_NUM);
 }
 
 
@@ -174,19 +211,27 @@ function currentPageURL()
 
 function create_issue($bundleidentifier, $issuelink)
 {
-    global $dbapptable, $createIssueTitle;
+    global $dbapptable, $createIssueTitle, $link;
     
-    $query = "SELECT issuetrackerurl FROM ".$dbapptable." WHERE bundleidentifier = '".$bundleidentifier."'";
-    $result = mysql_query($query) or die(end_with_result('Error in SQL '.$query));
-
-    $numrows = mysql_num_rows($result);
+    // $result = query_db($query) or die(end_with_result('Error in SQL '.$query));
+	try {
+		$query = "SELECT issuetrackerurl FROM ".$dbapptable." WHERE bundleidentifier = :ident";
+		$stmt = $link->prepare($query);
+		$stmt->bindValue(':ident', $bundleidentifier);
+		$stmt->execute();
+	}
+	catch(PDOException $e) {
+		die(end_with_result('Error in SQL '.$query));
+	}
+	
+    $numrows = $stmt->rowCount();
     if ($numrows > 0) {
         // get the status
-        while ($row = mysql_fetch_row($result))
+        while ($row = $stmt->fetch())
         {
-            if ($row[0] != "")
+            if ($row['issuetrackerurl'] != "")
             {
-                $issuetrackerurl = $row[0];
+                $issuetrackerurl = $row['issuetrackerurl'];
                 $issuetrackerurl = str_replace('%subject%', urlencode($createIssueTitle), $issuetrackerurl);
                 $issuetrackerurl = str_replace('%description%', urlencode('Crash Log: '.$issuelink), $issuetrackerurl);
                 return "<a href='".$issuetrackerurl."' target='_new' class='button'>New issue</a>";
