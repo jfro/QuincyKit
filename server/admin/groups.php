@@ -101,7 +101,7 @@ $crashestime = true;
 
 $osticks = "";
 $osvalues = "";
-$query2 = "SELECT systemversion, COUNT(systemversion) FROM ".$dbcrashtable.$whereclause." WHERE bundleidentifier = '".$bundleidentifier."' AND version = '".$version."' group by systemversion order by systemversion desc";
+$query2 = "SELECT systemversion, COUNT(systemversion) FROM ".$dbcrashtable." WHERE bundleidentifier = '".$bundleidentifier."' AND version = '".$version."' group by systemversion order by systemversion desc";
 $result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query2));
 $numrows2 = $result2->rowCount();
 if ($numrows2 > 0) {
@@ -113,14 +113,13 @@ if ($numrows2 > 0) {
 		$osvalues .= $row2[1];
 	}
 }
-mysql_free_result($result2);
 
 // get the amount of crashes per system version
 $crashestime = true;
 
 $platformticks = "";
 $platformvalues = "";
-$query = "SELECT platform, COUNT(platform) FROM ".$dbcrashtable." WHERE bundleidentifier = '".$bundleidentifier."' AND version = '".$version."' AND platform != \"\" group by platform order by platform desc";
+$query = "SELECT platform, COUNT(platform) FROM ".$dbcrashtable." WHERE bundleidentifier = '".$bundleidentifier."' AND version = '".$version."' AND platform != '' group by platform order by platform desc";
 $result = query_db($query) or die(end_with_result('Error in SQL '.$query));
 $numrows = $result->rowCount();
 if ($numrows > 0) {
@@ -213,7 +212,6 @@ if ($numrows > 0) {
 		echo '</form>';
 	}
 	
-	mysql_free_result($result);
 }
 
 // get all bugs not assigned to groups
@@ -233,10 +231,7 @@ if ($numrows > 0) {
 		echo "<a href='groups.php?bundleidentifier=".$bundleidentifier."&version=".$version."&groupid=0' class='button redButton' onclick='return confirm(\"Do you really want to delete this item?\");'>Delete</a></td></tr>";
 		echo '</table>';
 	}
-	mysql_free_result($result);
 }
-
-mysql_close($link);
 
 ?>
 </div>

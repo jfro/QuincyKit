@@ -154,14 +154,13 @@ if ($groupid !='') {
 					$osvalues .= $row2[1];
 				}
 			}
-			mysql_free_result($result2);
 			
 			// get the amount of crashes per system version
 			$crashestime = true;
 			
 			$platformticks = "";
 			$platformvalues = "";
-			$query2 = "SELECT platform, COUNT(platform) FROM ".$dbcrashtable.$whereclause." AND platform != \"\" group by platform order by platform desc";
+			$query2 = "SELECT platform, COUNT(platform) FROM ".$dbcrashtable.$whereclause." AND platform != '' group by platform order by platform desc";
 			$result2 = query_db($query2) or die(end_with_result('Error in SQL '.$query2));
 			$numrows2 = result_num_rows($result2);
 			if ($numrows2 > 0) {
@@ -173,7 +172,6 @@ if ($groupid !='') {
 					$platformvalues .= $row2[1];
 				}
 			}
-			mysql_free_result($result2);
 			
 			
 			
@@ -197,10 +195,8 @@ if ($groupid !='') {
                 $row2 = result_fetch_row($result2);
                 $amount = $row2[0];
             }
-            mysql_free_result($result2);
         }
     }
-   	mysql_free_result($result);
 }
 
 echo '<table id="crashlist">'.$cols;
@@ -233,7 +229,6 @@ if ($numrows > 0) {
 			$row2 = result_fetch_row($result2);
 			$todo = $row2[0];
 		}
-		mysql_free_result($result2);
 		
 		$now = time();
 		
@@ -290,7 +285,6 @@ if ($numrows > 0) {
 		echo "</tr>";
 	}
 	
-	mysql_free_result($result);
 } else {
 	echo '<tr><td colspan="4">No data found</td></tr>';
 }
@@ -300,7 +294,6 @@ echo "<table>".$cols;
 echo "<tr><th colspan='2'>Description</th><th colspan='2'>Log</th></tr>";
 echo "<tr><td colspan='2'><div id='descriptionarea' class='short'></div></td><td colspan='2'><div id='logarea' class='log'></div></td></tr></table>";
 
-mysql_close($link);
 
 ?>
 <script type="text/javascript">

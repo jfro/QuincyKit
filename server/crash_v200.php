@@ -39,25 +39,24 @@ if (!class_exists('XMLReader', false)) die(xml_for_result(FAILURE_PHP_XMLREADER_
 
 if ($push_activated || $boxcar_activated) {
 	
-	$curl_info = curl_version();	// Checks for cURL function and SSL version. Thanks Adrian Rollett!
-	if(!function_exists('curl_exec') || empty($curl_info['ssl_version']))
-    	die(xml_for_result(FAILURE_PHP_CURL_LIB));
-	
-	if ($push_prowlids != "") {
-		include('ProwlPHP.php');
-
-    	if (!class_exists('Prowl', false)) die(xml_for_result(FAILURE_PHP_PROWL_CLASS));
-
-		$prowl = new Prowl($push_prowlids);
-	} else {
-		$push_activated = false;
-	}
-	
-	if ($boxcar_uid != "" && $boxcar_pwd != ""){
-		include('class.boxcar.php');
-	} else {
-		$boxcar_activated = false;
-	}
+	// $curl_info = function_exists('curl_version') ? curl_version() : '';	// Checks for cURL function and SSL version. Thanks Adrian Rollett!
+	// if(!function_exists('curl_exec') || empty($curl_info['ssl_version']))
+	//     	die(xml_for_result(FAILURE_PHP_CURL_LIB));
+	// if ($push_prowlids != "") {
+	// 	include('ProwlPHP.php');
+	// 
+	//     	if (!class_exists('Prowl', false)) die(xml_for_result(FAILURE_PHP_PROWL_CLASS));
+	// 
+	// 	$prowl = new Prowl($push_prowlids);
+	// } else {
+	// 	$push_activated = false;
+	// }
+	// 
+	// if ($boxcar_uid != "" && $boxcar_pwd != ""){
+	// 	include('class.boxcar.php');
+	// } else {
+	// 	$boxcar_activated = false;
+	// }
 	
 } else {
 	
@@ -274,25 +273,25 @@ while ($reader->read()) {
         $crashes[$crashIndex]["appname"] = "";
         
 	} else if ($reader->name == "bundleidentifier" && $reader->nodeType == XMLReader::ELEMENT) {
-		$crashes[$crashIndex]["bundleidentifier"] = mysql_real_escape_string(reading($reader, "bundleidentifier"));
+		$crashes[$crashIndex]["bundleidentifier"] = reading($reader, "bundleidentifier");
 	} else if ($reader->name == "version" && $reader->nodeType == XMLReader::ELEMENT) {
-        $crashes[$crashIndex]["version"] = mysql_real_escape_string(reading($reader, "version"));
+        $crashes[$crashIndex]["version"] = reading($reader, "version");
 		if( !ValidateString( $crashes[$crashIndex]["version"], array('format'=>VALIDATE_NUM . VALIDATE_ALPHA. VALIDATE_SPACE . VALIDATE_PUNCTUATION) ) )
 		    die(xml_for_result(FAILURE_XML_VERSION_NOT_ALLOWED));
 	} else if ($reader->name == "senderversion" && $reader->nodeType == XMLReader::ELEMENT) {
-        $crashes[$crashIndex]["senderversion"] = mysql_real_escape_string(reading($reader, "senderversion"));
+        $crashes[$crashIndex]["senderversion"] = reading($reader, "senderversion");
         if (!ValidateString( $crashes[$crashIndex]["senderversion"], array('format'=>VALIDATE_NUM . VALIDATE_ALPHA. VALIDATE_SPACE . VALIDATE_PUNCTUATION) ) )
             die(xml_for_result(FAILURE_XML_SENDER_VERSION_NOT_ALLOWED));
 	} else if ($reader->name == "applicationname" && $reader->nodeType == XMLReader::ELEMENT) {
-		$crashes[$crashIndex]["applicationname"] = mysql_real_escape_string(reading($reader, "applicationname"));
+		$crashes[$crashIndex]["applicationname"] = reading($reader, "applicationname");
 	} else if ($reader->name == "systemversion" && $reader->nodeType == XMLReader::ELEMENT) {
-		$crashes[$crashIndex]["systemversion"] = mysql_real_escape_string(reading($reader, "systemversion"));
+		$crashes[$crashIndex]["systemversion"] = reading($reader, "systemversion");
 	} else if ($reader->name == "userid" && $reader->nodeType == XMLReader::ELEMENT) {
-		$crashes[$crashIndex]["userid"] = mysql_real_escape_string(reading($reader, "userid"));
+		$crashes[$crashIndex]["userid"] = reading($reader, "userid");
 	} else if ($reader->name == "contact" && $reader->nodeType == XMLReader::ELEMENT) {
-        $crashes[$crashIndex]["contact"] = mysql_real_escape_string(reading($reader, "contact"));
+        $crashes[$crashIndex]["contact"] = reading($reader, "contact");
 	} else if ($reader->name == "description" && $reader->nodeType == XMLReader::ELEMENT) {
-		$crashes[$crashIndex]["description"] = mysql_real_escape_string(reading($reader, "description"));
+		$crashes[$crashIndex]["description"] = reading($reader, "description");
 	} else if ($reader->name == "log" && $reader->nodeType == XMLReader::ELEMENT) {
 		$crashes[$crashIndex]["logdata"] = reading($reader, "log");
 	} else if ($reader->name == "platform" && $reader->nodeType == XMLReader::ELEMENT) {

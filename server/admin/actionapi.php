@@ -71,14 +71,12 @@ if ($action == "deletecrashid" && $id != "") {
                         $lastupdate = $row2[0];
                         if ($lastupdate == "") $lastupdate = 0;
                     }
-                    mysql_free_result($result2);
                     
                     $query2 = "UPDATE ".$dbgrouptable." SET latesttimestamp = ".$lastupdate." WHERE id = ".$groupid;
                     $result2 = query_db($query2) or die('Error in SQL '.$query2);
                 }
             }
         }
-        mysql_free_result($result);
         
         $query = "UPDATE ".$dbgrouptable." SET amount=amount-1 WHERE id=".$groupid;
         $result = query_db($query) or die('Error in SQL '.$query);
@@ -110,7 +108,6 @@ if ($action == "deletecrashid" && $id != "") {
       $query = "SELECT id FROM ".$dbversiontable." WHERE bundleidentifier = '".$bundleidentifier."' and version = '".$fixversion."'";
       $result = query_db($query) or die('Error in SQL '.$query);        
       $numrows = result_num_rows($result);
-      mysql_free_result($result);
       if ($numrows == 0) {
           // version is not available, so add it with status VERSION_STATUS_AVAILABLE
           $query = "INSERT INTO ".$dbversiontable." (bundleidentifier, version, status) values ('".$bundleidentifier."', '".$fixversion."', ".VERSION_STATUS_UNKNOWN.")";
@@ -118,14 +115,13 @@ if ($action == "deletecrashid" && $id != "") {
       }
   }
       
-  $query = "UPDATE ".$dbgrouptable." SET description = '".mysql_real_escape_string($description)."' WHERE id = ".$id;
+  $query = "UPDATE ".$dbgrouptable." SET description = '".addslashes($description)."' WHERE id = ".$id;
   $result = query_db($query) or die('Error in SQL '.$query);
 } else if ($action == "symbolicatecrashid" && $id != "") {
     $query = "SELECT id FROM ".$dbsymbolicatetable." WHERE crashid = ".$id;
     $result = query_db($query) or die('Error in SQL '.$query);
     
     $numrows = result_num_rows($result);
-    mysql_free_result($result);
     
     if ($numrows > 0)
         $query = "UPDATE ".$dbsymbolicatetable." SET done = 0 WHERE crashid = ".$id;
@@ -149,7 +145,6 @@ if ($action == "deletecrashid" && $id != "") {
             $crashids .= $row[0];
     
         }
-        mysql_free_result($result);
     }
     
     echo $crashids;
@@ -163,7 +158,6 @@ if ($action == "deletecrashid" && $id != "") {
         {
             echo $row[0];
         }
-        mysql_free_result($result);
     }
 } else if ($action == "getdescriptioncrashid" && $id != "") {
     $query = "SELECT description FROM ".$dbcrashtable." WHERE id = ".$id;
@@ -175,7 +169,6 @@ if ($action == "deletecrashid" && $id != "") {
         {
             echo $row[0];
         }
-        mysql_free_result($result);
     }
 } else if ($action == "downloadcrashid" && ($id != "" || $groupid != "")) {
     $query = "";
@@ -199,14 +192,12 @@ if ($action == "deletecrashid" && $id != "") {
         header('Content-Disposition: attachment; filename="'.$timestamp.'.crash"');
         echo $log;
         
-        mysql_free_result($result);
     }
 } else {
     die('Wrong parameters');
 }
 
 
-mysql_close($link);
 
 
 ?>
